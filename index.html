@@ -755,16 +755,16 @@
         #imageExportStage .sign-row .export-value { width:148px !important; }
         #imageExportStage .leave-types label { font-size:13px !important; line-height:1.4 !important; gap:5px !important; }
         #imageExportStage .export-radio {
-          width:15px !important;
-          height:15px !important;
-          border:1.5px solid #999 !important;
-          border-radius:50% !important;
-          display:inline-block !important;
-          flex:0 0 15px !important;
-          background:#fff !important;
-        }
-        #imageExportStage .export-radio.checked {
-          border:4px solid #111 !important;
+          display:inline-flex !important;
+          align-items:center !important;
+          justify-content:center !important;
+          width:17px !important;
+          height:17px !important;
+          flex:0 0 17px !important;
+          color:#111 !important;
+          font-family:'Malgun Gothic','Noto Sans KR',Arial,sans-serif !important;
+          font-size:14px !important;
+          line-height:1 !important;
         }
       `;
       stage.appendChild(exportStyle);
@@ -800,9 +800,24 @@
         input.replaceWith(span);
       });
       clone.querySelectorAll('input[type="radio"]').forEach(input => {
+        const src = Array.from(document.querySelectorAll(`input[name="${input.name}"]`))
+          .find(r => r.value === input.value);
+        const checked = src ? src.checked : input.checked;
+        const label = input.closest('label');
+        if (!checked) {
+          if (label) label.remove();
+          return;
+        }
         const mark = document.createElement('span');
-        mark.className = `export-radio${input.checked ? ' checked' : ''}`;
-        input.replaceWith(mark);
+        mark.className = 'export-radio';
+        mark.textContent = '☑';
+        if (label) {
+          label.textContent = '';
+          label.appendChild(mark);
+          label.append(` ${input.value}`);
+        } else {
+          input.replaceWith(mark);
+        }
       });
 
       // 점선 밑줄 제거 + 저장용 크기 고정
