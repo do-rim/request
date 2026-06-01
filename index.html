@@ -632,85 +632,115 @@
     box.style.background  = '#ffffff';
   }
 
-  // ── 사진으로 저장 ──
+  // ── 사진으로 저장 (A4 비율 고정) ──
   async function saveAsImage() {
     const btn = document.getElementById('btnSaveImg');
     btn.disabled = true;
     btn.textContent = '⏳ 저장 중...';
+
+    // A4 픽셀 크기 (96dpi 기준 × 3 = 고해상도)
+    const A4_W = 794 * 3;   // 2382px
+    const A4_H = 1123 * 3;  // 3369px
+
     try {
-      const target = document.querySelector('.paper-wrap');
+      // ── 1. 숨겨진 오프스크린 iframe으로 680px 데스크탑 레이아웃 렌더 ──
+      const iframe = document.createElement('iframe');
+      iframe.style.cssText = 'position:fixed;left:-9999px;top:0;width:680px;height:1200px;border:none;visibility:hidden;';
+      document.body.appendChild(iframe);
 
-      // 현재 인라인 스타일 백업
-      const prevWidth    = target.style.width;
-      const prevMinWidth = target.style.minWidth;
-      const prevPosition = target.style.position;
+      // 현재 HTML을 그대로 복제해 iframe에 주입
+      const srcHtml = document.documentElement.outerHTML;
+      iframe.contentDocument.open();
+      iframe.contentDocument.write(srcHtml);
+      iframe.contentDocument.close();
 
-      // 캡처용으로 강제 680px 데스크탑 너비 설정 (모바일 미디어쿼리 우회)
-      target.style.width    = '680px';
-      target.style.minWidth = '680px';
-      target.style.position = 'relative';
+      // 폰트·렌더링 대기
+      await new Promise(r => setTimeout(r, 800));
 
-      // 레이아웃 반영 대기
+      const idoc  = iframe.contentDocument;
+      const iwin  = iframe.contentWindow;
+
+      // iframe 내 현재 값 동기화
+      const fields = ['dept','name','position','reason','available','accumulated',
+                      'startDate','endDate','totalDays','phone',
+                      'submitYear','submitMonth','submitDay','signDept','signName'];
+      fields.forEach(id => {
+        const src = document.getElementById(id);
+        const dst = idoc.getElementById(id);
+        if (src && dst) dst.value = src.value;
+      });
+      // 라디오 동기화
+      document.querySelectorAll('input[name="leaveType"]').forEach(r => {
+        const dst = idoc.querySelector(`input[name="leaveType"][value="${r.value}"]`);
+        if (dst) dst.checked = r.checked;
+      });
+      // 서명 이미지 동기화
+      const srcImg = document.querySelector('#signBox img');
+      if (srcImg) {
+        const dstBox = idoc.getElementById('signBox');
+        const dstLabel = idoc.getElementById('signBoxLabel');
+        if (dstBox) {
+          const ni = idoc.createElement('img');
+          ni.src = srcImg.src;
+          ni.style.cssText = 'width:100%;height:100%;object-fit:contain;display:block;';
+          const dstRemove = idoc.getElementById('removeSignBtn');
+          dstBox.insertBefore(ni, dstRemove);
+          if (dstLabel) dstLabel.style.display = 'none';
+          dstBox.style.background = '#ffffff';
+        }
+      }
+
+      // 점선 밑줄 제거 + 툴바 숨김
+      idoc.querySelectorAll('input').forEach(el => el.style.borderBottom = 'none');
+      const tb = idoc.querySelector('.toolbar');
+      if (tb) tb.style.display = 'none';
+      // body 패딩 제거
+      idoc.body.style.cssText = 'margin:0;padding:0;background:white;display:block;';
+      const pw = idoc.querySelector('.paper-wrap');
+      if (pw) { pw.style.width = '680px'; pw.style.boxShadow = 'none'; }
+
       await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
 
-      const canvas = await html2canvas(target, {
-        scale: 2,
+      // ── 2. html2canvas로 캡처 ──
+      const raw = await iwin.html2canvas(idoc.querySelector('.paper-wrap'), {
+        scale: 3,
         useCORS: true,
         backgroundColor: '#ffffff',
         logging: false,
         width: 680,
-        windowWidth: 900,   // 미디어쿼리가 모바일로 안 잡히도록 큰 값
-        onclone: function(doc) {
-          const cloneWrap = doc.querySelector('.paper-wrap');
-          if (cloneWrap) {
-            cloneWrap.style.width    = '680px';
-            cloneWrap.style.minWidth = '680px';
-          }
-          // 점선 밑줄 제거
-          doc.querySelectorAll('input').forEach(el => {
-            el.style.borderBottom = 'none';
-          });
-          // 모바일 블록화 강제 해제
-          const style = doc.createElement('style');
-          style.textContent = `
-            @media (max-width: 600px) {
-              .main-table, .main-table tbody,
-              .main-table tr, .main-table th, .main-table td { display: revert !important; }
-              .main-table th { width: 100px !important; padding: 10px 0 !important; text-align: center !important; border-right: 1px solid #222 !important; background: #f8f8f8 !important; font-size: 12px !important; }
-              .main-table td { padding: 8px 14px !important; font-size: 12px !important; border-bottom: none !important; }
-              .main-table tr { border-bottom: 1px solid #222 !important; }
-              .main-table tr:last-child { border-bottom: none !important; }
-              .days-row { flex-direction: row !important; }
-              .days-cell { border-right: 1px solid #222 !important; border-bottom: none !important; }
-              .period-row { flex-direction: row !important; align-items: center !important; gap: 8px !important; }
-              .period-row .tilde { display: inline !important; }
-              .period-row input[type="date"] { width: 130px !important; }
-              .sign-area { align-items: flex-end !important; }
-              .sign-row { flex-wrap: nowrap !important; }
-              .approval-box { position: absolute !important; top: 5.5% !important; right: 7% !important; margin: 0 !important; }
-              .form-page { padding: 5.5% 7% !important; position: relative !important; }
-              h1 { font-size: clamp(18px,3.5vw,30px) !important; letter-spacing: 0.4em !important; }
-            }
-          `;
-          doc.head.appendChild(style);
-        }
+        windowWidth: 680,
       });
 
-      // 원래 스타일 복원
-      target.style.width    = prevWidth;
-      target.style.minWidth = prevMinWidth;
-      target.style.position = prevPosition;
+      document.body.removeChild(iframe);
 
-      // 다운로드
-      const link = document.createElement('a');
+      // ── 3. A4 캔버스에 맞게 스케일 합성 ──
+      const out = document.createElement('canvas');
+      out.width  = A4_W;
+      out.height = A4_H;
+      const ctx = out.getContext('2d');
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, A4_W, A4_H);
+
+      // 콘텐츠를 A4 안에 비율 유지하며 꽉 채움
+      const scale = Math.min(A4_W / raw.width, A4_H / raw.height);
+      const dw = raw.width  * scale;
+      const dh = raw.height * scale;
+      const dx = (A4_W - dw) / 2;
+      const dy = (A4_H - dh) / 2;
+      ctx.drawImage(raw, dx, dy, dw, dh);
+
+      // ── 4. 다운로드 ──
+      const link  = document.createElement('a');
       const today = new Date();
-      const ymd = `${today.getFullYear()}${String(today.getMonth()+1).padStart(2,'0')}${String(today.getDate()).padStart(2,'0')}`;
+      const ymd   = `${today.getFullYear()}${String(today.getMonth()+1).padStart(2,'0')}${String(today.getDate()).padStart(2,'0')}`;
       const nameVal = document.getElementById('name').value.trim() || '신청서';
       link.download = `휴가신청서_${nameVal}_${ymd}.png`;
-      link.href = canvas.toDataURL('image/png');
+      link.href = out.toDataURL('image/png');
       link.click();
+
     } catch(err) {
       alert('이미지 저장 중 오류가 발생했습니다.\n' + err.message);
+      console.error(err);
     } finally {
       btn.disabled = false;
       btn.textContent = '🖼 사진으로 저장';
