@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>휴가 신청서</title>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&family=Noto+Serif+KR:wght@400;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <style>
   :root {
     --border: #222;
@@ -56,6 +57,9 @@
   .btn-print:hover  { background: #e0ab2e; }
   .btn-pdf    { background: #2a7fc8; color: #fff; }
   .btn-pdf:hover    { background: #3a90e0; }
+  .btn-img    { background: #2a9c6e; color: #fff; }
+  .btn-img:hover    { background: #33b87f; }
+  .btn-img:disabled { background: #aaa; cursor: not-allowed; }
 
   /* ────────────────────────────────────────────
      A4 용지 컨테이너
@@ -279,6 +283,7 @@
     overflow: hidden;
     position: relative;
     transition: border-color 0.2s, background 0.2s;
+    background: #ffffff;
   }
   .sign-box:hover { border-color: #2a7fc8; background: #f0f7ff; color: #2a7fc8; }
   .sign-box img {
@@ -423,6 +428,7 @@
 <div class="toolbar">
   <button class="btn-reset" onclick="resetForm()">🗑 초기화</button>
   <button class="btn-print" onclick="window.print()">🖨 인쇄 / PDF 저장 (A4)</button>
+  <button class="btn-img"   id="btnSaveImg" onclick="saveAsImage()">🖼 사진으로 저장</button>
   <button class="btn-pdf"   onclick="printGuide()">💡 PDF 저장 방법</button>
 </div>
 
@@ -576,7 +582,7 @@
     }
   }
 
-  // 서명 이미지 업로드
+  // 서명 이미지 업로드 — PNG 투명 배경 → 흰색으로 합성
   function handleSignBoxClick(e) {
     if (e.target.id === 'removeSignBtn') return;
     document.getElementById('signImageInput').click();
@@ -587,18 +593,30 @@
     if (!file) return;
     const reader = new FileReader();
     reader.onload = function(ev) {
-      const box = document.getElementById('signBox');
-      const label = document.getElementById('signBoxLabel');
-      // 기존 img 제거
-      const old = box.querySelector('img');
-      if (old) old.remove();
-      // 새 img 삽입
-      const img = document.createElement('img');
-      img.src = ev.target.result;
-      box.insertBefore(img, document.getElementById('removeSignBtn'));
-      label.style.display = 'none';
-      box.style.borderColor = '#555';
-      box.style.background  = 'transparent';
+      const rawImg = new Image();
+      rawImg.onload = function() {
+        // Canvas로 흰 배경 위에 합성
+        const canvas = document.createElement('canvas');
+        canvas.width  = rawImg.naturalWidth;
+        canvas.height = rawImg.naturalHeight;
+        const ctx = canvas.getContext('2d');
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(rawImg, 0, 0);
+        const flatDataUrl = canvas.toDataURL('image/png');
+
+        const box   = document.getElementById('signBox');
+        const label = document.getElementById('signBoxLabel');
+        const old   = box.querySelector('img');
+        if (old) old.remove();
+        const img = document.createElement('img');
+        img.src = flatDataUrl;
+        box.insertBefore(img, document.getElementById('removeSignBtn'));
+        label.style.display = 'none';
+        box.style.borderColor = '#555';
+        box.style.background  = '#ffffff';
+      };
+      rawImg.src = ev.target.result;
     };
     reader.readAsDataURL(file);
   });
@@ -611,7 +629,46 @@
     document.getElementById('signBoxLabel').style.display = '';
     document.getElementById('signImageInput').value = '';
     box.style.borderColor = '';
-    box.style.background  = '';
+    box.style.background  = '#ffffff';
+  }
+
+  // ── 사진으로 저장 ──
+  async function saveAsImage() {
+    const btn = document.getElementById('btnSaveImg');
+    btn.disabled = true;
+    btn.textContent = '⏳ 저장 중...';
+    try {
+      const target = document.querySelector('.paper-wrap');
+      const canvas = await html2canvas(target, {
+        scale: 2,                  // 2x 고해상도
+        useCORS: true,
+        backgroundColor: '#ffffff',
+        logging: false,
+        onclone: function(doc) {
+          // 클론 문서에서 placeholder 숨기기 & input 값 텍스트로 표시
+          doc.querySelectorAll('input[type="text"],input[type="tel"]').forEach(el => {
+            el.style.borderBottom = 'none';
+          });
+          doc.querySelectorAll('input[type="date"],input[type="number"]').forEach(el => {
+            el.style.borderBottom = 'none';
+          });
+        }
+      });
+
+      // 다운로드
+      const link = document.createElement('a');
+      const today = new Date();
+      const ymd = `${today.getFullYear()}${String(today.getMonth()+1).padStart(2,'0')}${String(today.getDate()).padStart(2,'0')}`;
+      const nameVal = document.getElementById('name').value.trim() || '신청서';
+      link.download = `휴가신청서_${nameVal}_${ymd}.png`;
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+    } catch(err) {
+      alert('이미지 저장 중 오류가 발생했습니다.\n' + err.message);
+    } finally {
+      btn.disabled = false;
+      btn.textContent = '🖼 사진으로 저장';
+    }
   }
 
   function resetForm() {
