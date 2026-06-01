@@ -636,6 +636,17 @@
 </div>
 
 <script>
+  let selectedLeaveType = '';
+
+  function syncLeaveType() {
+    const checked = document.querySelector('input[name="leaveType"]:checked');
+    selectedLeaveType = checked ? checked.value : '';
+  }
+
+  document.querySelectorAll('input[name="leaveType"]').forEach(radio => {
+    radio.addEventListener('change', syncLeaveType);
+  });
+
   function calcDays() {
     const s = document.getElementById('startDate').value;
     const e = document.getElementById('endDate').value;
@@ -783,9 +794,10 @@
         if (src && dst) dst.value = src.value;
       });
       // 라디오 동기화
+      syncLeaveType();
       document.querySelectorAll('input[name="leaveType"]').forEach(r => {
         const dst = clone.querySelector(`input[name="leaveType"][value="${r.value}"]`);
-        if (dst) dst.checked = r.checked;
+        if (dst) dst.checked = selectedLeaveType ? r.value === selectedLeaveType : r.checked;
       });
 
       // 모바일 브라우저에서 input/date/radio 캡처가 잘리는 문제를 피하기 위해
@@ -802,7 +814,9 @@
       clone.querySelectorAll('input[type="radio"]').forEach(input => {
         const src = Array.from(document.querySelectorAll(`input[name="${input.name}"]`))
           .find(r => r.value === input.value);
-        const checked = src ? src.checked : input.checked;
+        const checked = selectedLeaveType
+          ? input.value === selectedLeaveType
+          : (src ? src.checked : input.checked);
         const label = input.closest('label');
         if (!checked) {
           if (label) label.remove();
