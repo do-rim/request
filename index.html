@@ -639,21 +639,67 @@
     btn.textContent = '⏳ 저장 중...';
     try {
       const target = document.querySelector('.paper-wrap');
+
+      // 현재 인라인 스타일 백업
+      const prevWidth    = target.style.width;
+      const prevMinWidth = target.style.minWidth;
+      const prevPosition = target.style.position;
+
+      // 캡처용으로 강제 680px 데스크탑 너비 설정 (모바일 미디어쿼리 우회)
+      target.style.width    = '680px';
+      target.style.minWidth = '680px';
+      target.style.position = 'relative';
+
+      // 레이아웃 반영 대기
+      await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+
       const canvas = await html2canvas(target, {
-        scale: 2,                  // 2x 고해상도
+        scale: 2,
         useCORS: true,
         backgroundColor: '#ffffff',
         logging: false,
+        width: 680,
+        windowWidth: 900,   // 미디어쿼리가 모바일로 안 잡히도록 큰 값
         onclone: function(doc) {
-          // 클론 문서에서 placeholder 숨기기 & input 값 텍스트로 표시
-          doc.querySelectorAll('input[type="text"],input[type="tel"]').forEach(el => {
+          const cloneWrap = doc.querySelector('.paper-wrap');
+          if (cloneWrap) {
+            cloneWrap.style.width    = '680px';
+            cloneWrap.style.minWidth = '680px';
+          }
+          // 점선 밑줄 제거
+          doc.querySelectorAll('input').forEach(el => {
             el.style.borderBottom = 'none';
           });
-          doc.querySelectorAll('input[type="date"],input[type="number"]').forEach(el => {
-            el.style.borderBottom = 'none';
-          });
+          // 모바일 블록화 강제 해제
+          const style = doc.createElement('style');
+          style.textContent = `
+            @media (max-width: 600px) {
+              .main-table, .main-table tbody,
+              .main-table tr, .main-table th, .main-table td { display: revert !important; }
+              .main-table th { width: 100px !important; padding: 10px 0 !important; text-align: center !important; border-right: 1px solid #222 !important; background: #f8f8f8 !important; font-size: 12px !important; }
+              .main-table td { padding: 8px 14px !important; font-size: 12px !important; border-bottom: none !important; }
+              .main-table tr { border-bottom: 1px solid #222 !important; }
+              .main-table tr:last-child { border-bottom: none !important; }
+              .days-row { flex-direction: row !important; }
+              .days-cell { border-right: 1px solid #222 !important; border-bottom: none !important; }
+              .period-row { flex-direction: row !important; align-items: center !important; gap: 8px !important; }
+              .period-row .tilde { display: inline !important; }
+              .period-row input[type="date"] { width: 130px !important; }
+              .sign-area { align-items: flex-end !important; }
+              .sign-row { flex-wrap: nowrap !important; }
+              .approval-box { position: absolute !important; top: 5.5% !important; right: 7% !important; margin: 0 !important; }
+              .form-page { padding: 5.5% 7% !important; position: relative !important; }
+              h1 { font-size: clamp(18px,3.5vw,30px) !important; letter-spacing: 0.4em !important; }
+            }
+          `;
+          doc.head.appendChild(style);
         }
       });
+
+      // 원래 스타일 복원
+      target.style.width    = prevWidth;
+      target.style.minWidth = prevMinWidth;
+      target.style.position = prevPosition;
 
       // 다운로드
       const link = document.createElement('a');
