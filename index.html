@@ -734,6 +734,38 @@
         #imageExportStage .sign-area { align-items:flex-end !important; }
         #imageExportStage .sign-row { flex-wrap:nowrap !important; gap:16px !important; }
         #imageExportStage .sign-row input { width:148px !important; }
+        #imageExportStage .export-value {
+          display:inline-flex !important;
+          align-items:center !important;
+          justify-content:center !important;
+          min-height:22px !important;
+          color:var(--text) !important;
+          font-family:'Noto Sans KR','Malgun Gothic','Apple SD Gothic Neo',Arial,sans-serif !important;
+          font-size:13px !important;
+          line-height:1.4 !important;
+          white-space:nowrap !important;
+          vertical-align:middle !important;
+        }
+        #imageExportStage .main-table td > .export-value { width:100% !important; }
+        #imageExportStage .days-cell .export-value { width:52px !important; }
+        #imageExportStage .period-row .export-value.date-value { width:148px !important; }
+        #imageExportStage .period-row .total-days .export-value { width:48px !important; }
+        #imageExportStage .submit-date .export-value.year-value { width:66px !important; }
+        #imageExportStage .submit-date .export-value.short-value { width:44px !important; }
+        #imageExportStage .sign-row .export-value { width:148px !important; }
+        #imageExportStage .leave-types label { font-size:13px !important; line-height:1.4 !important; gap:5px !important; }
+        #imageExportStage .export-radio {
+          width:15px !important;
+          height:15px !important;
+          border:1.5px solid #999 !important;
+          border-radius:50% !important;
+          display:inline-block !important;
+          flex:0 0 15px !important;
+          background:#fff !important;
+        }
+        #imageExportStage .export-radio.checked {
+          border:4px solid #111 !important;
+        }
       `;
       stage.appendChild(exportStyle);
 
@@ -756,8 +788,24 @@
         if (dst) dst.checked = r.checked;
       });
 
-      // 점선 밑줄 제거 + 툴바 숨김
-      clone.querySelectorAll('input').forEach(el => el.style.borderBottom = 'none');
+      // 모바일 브라우저에서 input/date/radio 캡처가 잘리는 문제를 피하기 위해
+      // 저장용 복제본에서는 입력 컨트롤을 일반 텍스트로 바꾼다.
+      clone.querySelectorAll('input[type="text"], input[type="date"], input[type="number"], input[type="tel"]').forEach(input => {
+        const span = document.createElement('span');
+        span.className = 'export-value';
+        if (input.type === 'date') span.classList.add('date-value');
+        if (input.id === 'submitYear') span.classList.add('year-value');
+        if (input.id === 'submitMonth' || input.id === 'submitDay') span.classList.add('short-value');
+        span.textContent = input.value || '';
+        input.replaceWith(span);
+      });
+      clone.querySelectorAll('input[type="radio"]').forEach(input => {
+        const mark = document.createElement('span');
+        mark.className = `export-radio${input.checked ? ' checked' : ''}`;
+        input.replaceWith(mark);
+      });
+
+      // 점선 밑줄 제거 + 저장용 크기 고정
       clone.style.width = '680px';
       clone.style.boxShadow = 'none';
 
