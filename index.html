@@ -17,7 +17,7 @@
   * { box-sizing: border-box; margin: 0; padding: 0; }
 
   body {
-    font-family: 'Noto Sans KR', sans-serif;
+    font-family: 'Noto Sans KR', 'Malgun Gothic', 'Apple SD Gothic Neo', Arial, sans-serif;
     background: #d8d8d8;
     display: flex;
     flex-direction: column;
@@ -42,7 +42,7 @@
     justify-content: center;
   }
   .toolbar button {
-    font-family: 'Noto Sans KR', sans-serif;
+    font-family: 'Noto Sans KR', 'Malgun Gothic', 'Apple SD Gothic Neo', Arial, sans-serif;
     font-size: 13px;
     font-weight: 500;
     padding: 8px 20px;
@@ -83,7 +83,7 @@
 
   /* ── 제목 ── */
   h1 {
-    font-family: 'Noto Serif KR', serif;
+    font-family: 'Noto Serif KR', 'Batang', 'Nanum Myeongjo', serif;
     font-size: clamp(18px, 3.5vw, 30px);
     font-weight: 700;
     text-align: center;
@@ -146,7 +146,7 @@
 
   /* ── 입력 필드 공통 ── */
   input[type="text"], input[type="date"], input[type="number"], input[type="tel"] {
-    font-family: 'Noto Sans KR', sans-serif;
+    font-family: 'Noto Sans KR', 'Malgun Gothic', 'Apple SD Gothic Neo', Arial, sans-serif;
     font-size: clamp(10px, 1.4vw, 13px);
     border: none;
     border-bottom: 1.5px dashed #aaa;
@@ -357,47 +357,107 @@
      인쇄 — A4 portrait 최적화
   ══════════════════════════════════ */
   @media print {
-    html, body { margin: 0; padding: 0; background: white; }
+    html, body {
+      width: auto;
+      min-width: 0;
+      margin: 0;
+      padding: 0;
+      background: white;
+      display: block;
+      font-family: 'Noto Sans KR', 'Malgun Gothic', 'Apple SD Gothic Neo', Arial, sans-serif;
+      font-size-adjust: none;
+      -webkit-font-smoothing: antialiased;
+      text-rendering: geometricPrecision;
+    }
     .toolbar    { display: none; }
 
-    @page { size: A4 portrait; margin: 14mm 16mm 14mm 16mm; }
+    @page { size: A4 portrait; margin: 12mm 12mm 12mm 12mm; }
 
     .paper-wrap {
       width: 100%;
+      max-width: none;
+      min-height: 273mm;
+      height: auto;
+      overflow: visible;
       box-shadow: none;
+      break-inside: avoid;
+      page-break-inside: avoid;
     }
 
-    .form-page  { padding: 0; position: relative; }
+    .form-page  {
+      width: 100%;
+      min-height: 273mm;
+      padding: 0;
+      position: relative;
+      overflow: visible;
+      break-inside: avoid;
+      page-break-inside: avoid;
+    }
 
-    h1 { font-size: 20pt; letter-spacing: 0.4em; margin-bottom: 14pt; }
+    h1 {
+      font-family: 'Noto Serif KR', 'Batang', 'Nanum Myeongjo', serif;
+      font-size: 20pt;
+      line-height: 1.25;
+      letter-spacing: 0.4em;
+      margin-bottom: 14pt;
+    }
 
     .approval-box { position: absolute; top: 0; right: 0; }
     .approval-box td, .approval-box th { min-width: 44px; height: 24px; font-size: 9pt; padding: 3px 9px; }
     .approval-box .row-label { width: 18px; font-size: 8pt; padding: 2px 3px; }
 
-    .main-table { margin-bottom: 14pt; }
-    .main-table th { font-size: 9.5pt; padding: 8pt 0; width: 82px; }
-    .main-table td { font-size: 9.5pt; padding: 6pt 12pt; }
+    .main-table {
+      display: table;
+      table-layout: fixed;
+      width: 100%;
+      margin-bottom: 14pt;
+      break-inside: avoid;
+      page-break-inside: avoid;
+    }
+    .main-table tbody { display: table-row-group; }
+    .main-table tr {
+      display: table-row;
+      break-inside: avoid;
+      page-break-inside: avoid;
+    }
+    .main-table th {
+      display: table-cell;
+      width: 24mm;
+      font-size: 9.2pt;
+      line-height: 1.35;
+      padding: 7pt 0;
+      white-space: nowrap;
+    }
+    .main-table td {
+      display: table-cell;
+      font-size: 9.2pt;
+      line-height: 1.35;
+      padding: 5.5pt 10pt;
+    }
 
     /* 모바일 블록화 리셋 */
-    .main-table, .main-table tbody,
-    .main-table tr, .main-table th, .main-table td { display: revert; }
     .main-table tr  { border-bottom: 1px solid var(--border); }
     .main-table tr:last-child { border-bottom: none; }
     .main-table th  { background: var(--cell-bg); border-right: 1px solid var(--border); text-align: center; }
     .main-table td  { border-bottom: none; }
 
+    table, tr, th, td, .approval-box, .footer-bottom, .sign-area {
+      break-inside: avoid;
+      page-break-inside: avoid;
+    }
+
     .days-row   { flex-direction: row; }
-    .days-cell  { border-right: 1px solid var(--border); border-bottom: none; font-size: 9pt; padding: 6pt 8pt; }
+    .days-cell  { border-right: 1px solid var(--border); border-bottom: none; font-size: 8.8pt; line-height: 1.35; padding: 5.5pt 7pt; }
     .days-cell:last-child { border-right: none; }
     .days-cell input { width: 38px; }
 
-    .period-row { flex-direction: row; align-items: center; gap: 6pt; font-size: 9pt; }
+    .period-row { flex-direction: row; align-items: center; gap: 5pt; font-size: 8.8pt; }
     .period-row .tilde { display: inline; }
     .period-row input[type="date"] { width: 108px; }
-    .period-row .total-days { font-size: 9pt; }
+    .period-row .total-days { font-size: 8.8pt; }
 
-    .leave-types label { font-size: 9.5pt; }
+    .leave-types { gap: 5pt 11pt; }
+    .leave-types label { font-size: 9.2pt; line-height: 1.35; }
     .leave-types input[type="radio"] { width: 12px; height: 12px; }
 
     .footer-bottom { gap: 14pt; margin-top: 8pt; }
@@ -414,6 +474,9 @@
     .sign-box   { width: 58px; height: 40px; font-size: 8.5pt; }
 
     input, select, textarea {
+      font-family: 'Noto Sans KR', 'Malgun Gothic', 'Apple SD Gothic Neo', Arial, sans-serif !important;
+      font-size: 9.2pt !important;
+      line-height: 1.35 !important;
       border-bottom-color: #888 !important;
       background: transparent !important;
       -webkit-print-color-adjust: exact;
