@@ -1,0 +1,646 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>휴가 신청서</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&family=Noto+Serif+KR:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --border: #222;
+    --text: #111;
+    --accent: #1a1a2e;
+    --cell-bg: #f8f8f8;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Noto Sans KR', sans-serif;
+    background: #d8d8d8;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-height: 100vh;
+    padding: 24px 16px;
+    gap: 18px;
+  }
+
+  /* ── 툴바 ── */
+  .toolbar {
+    display: flex;
+    gap: 10px;
+    background: #1a1a2e;
+    padding: 12px 24px;
+    border-radius: 50px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+    position: sticky;
+    top: 16px;
+    z-index: 100;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  .toolbar button {
+    font-family: 'Noto Sans KR', sans-serif;
+    font-size: 13px;
+    font-weight: 500;
+    padding: 8px 20px;
+    border: none;
+    border-radius: 30px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .btn-reset  { background: #444; color: #eee; }
+  .btn-reset:hover  { background: #666; }
+  .btn-print  { background: #c8992a; color: #fff; }
+  .btn-print:hover  { background: #e0ab2e; }
+  .btn-pdf    { background: #2a7fc8; color: #fff; }
+  .btn-pdf:hover    { background: #3a90e0; }
+
+  /* ────────────────────────────────────────────
+     A4 용지 컨테이너
+     A4 = 210 × 297 mm  →  비율 = 210/297 ≈ 0.7071
+     화면 미리보기: 최대 680px 너비
+  ──────────────────────────────────────────── */
+  .paper-wrap {
+    width: min(680px, 100%);
+    background: white;
+    box-shadow: 0 6px 36px rgba(0,0,0,0.22);
+  }
+
+  /* ── 신청서 본체 ── */
+  .form-page {
+    width: 100%;
+    /* A3 실제 비율을 padding-bottom trick으로 구현
+       420/297 * 100 = 141.41% */
+    padding: 5.5% 7% 5.5%;
+    position: relative;
+  }
+
+  /* ── 제목 ── */
+  h1 {
+    font-family: 'Noto Serif KR', serif;
+    font-size: clamp(18px, 3.5vw, 30px);
+    font-weight: 700;
+    text-align: center;
+    letter-spacing: 0.4em;
+    color: var(--accent);
+    margin-bottom: clamp(16px, 2.5vw, 28px);
+  }
+
+  /* ── 결재란 ── */
+  .approval-box {
+    position: absolute;
+    top: 5.5%;
+    right: 7%;
+  }
+  .approval-box table { border-collapse: collapse; }
+  .approval-box td, .approval-box th {
+    border: 1px solid var(--border);
+    padding: clamp(3px, 0.5vw, 5px) clamp(8px, 1.2vw, 14px);
+    text-align: center;
+    min-width: clamp(40px, 6vw, 58px);
+    height: clamp(24px, 3vw, 34px);
+    font-size: clamp(9px, 1.2vw, 12px);
+  }
+  .approval-box .row-label {
+    background: #f0f0f0;
+    font-weight: 500;
+    width: clamp(18px, 2.5vw, 26px);
+    padding: 3px 4px;
+    font-size: clamp(8px, 1.1vw, 11px);
+  }
+
+  /* ── 메인 테이블 ── */
+  .main-table {
+    width: 100%;
+    border-collapse: collapse;
+    border: 1.5px solid var(--border);
+    margin-bottom: clamp(16px, 3vw, 30px);
+  }
+  .main-table tr { border-bottom: 1px solid var(--border); }
+  .main-table tr:last-child { border-bottom: none; }
+
+  .main-table th {
+    background: var(--cell-bg);
+    font-size: clamp(10px, 1.5vw, 13.5px);
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    padding: clamp(10px, 1.6vw, 15px) 0;
+    width: clamp(80px, 12vw, 118px);
+    text-align: center;
+    border-right: 1px solid var(--border);
+    vertical-align: middle;
+    color: #333;
+    white-space: nowrap;
+  }
+  .main-table td {
+    padding: clamp(7px, 1.1vw, 11px) clamp(10px, 1.8vw, 18px);
+    vertical-align: middle;
+    font-size: clamp(10px, 1.4vw, 13px);
+  }
+
+  /* ── 입력 필드 공통 ── */
+  input[type="text"], input[type="date"], input[type="number"], input[type="tel"] {
+    font-family: 'Noto Sans KR', sans-serif;
+    font-size: clamp(10px, 1.4vw, 13px);
+    border: none;
+    border-bottom: 1.5px dashed #aaa;
+    background: transparent;
+    color: var(--text);
+    padding: 3px 4px;
+    width: 100%;
+    outline: none;
+    transition: border-color 0.2s;
+    text-align: center;
+  }
+  input:focus { border-bottom-color: #2a7fc8; background: #f0f7ff; }
+
+  /* ── 휴가 종류 ── */
+  .leave-types {
+    display: flex;
+    flex-wrap: wrap;
+    gap: clamp(6px, 1vw, 12px) clamp(14px, 2.5vw, 26px);
+    padding: 2px 0;
+  }
+  .leave-types label {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: clamp(10px, 1.4vw, 13px);
+    cursor: pointer;
+    user-select: none;
+    white-space: nowrap;
+  }
+  .leave-types input[type="radio"] {
+    width: clamp(12px, 1.5vw, 15px);
+    height: clamp(12px, 1.5vw, 15px);
+    accent-color: #1a1a2e;
+    border: none;
+    border-bottom: none;
+    flex-shrink: 0;
+  }
+
+  /* ── 년차 사용일수 ── */
+  .days-row { display: flex; }
+  .days-cell {
+    flex: 1;
+    padding: clamp(7px, 1.1vw, 11px) clamp(8px, 1.4vw, 14px);
+    border-right: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: clamp(4px, 0.6vw, 7px);
+    font-size: clamp(10px, 1.3vw, 12.5px);
+    flex-wrap: wrap;
+  }
+  .days-cell:last-child { border-right: none; }
+  .days-cell span { white-space: nowrap; color: #444; }
+  .days-cell input { width: clamp(36px, 5vw, 52px); text-align: center; }
+
+  /* ── 휴가 기간 ── */
+  .period-row {
+    display: flex;
+    align-items: center;
+    gap: clamp(5px, 0.8vw, 10px);
+    flex-wrap: wrap;
+  }
+  .period-row input[type="date"] { width: clamp(110px, 16vw, 148px); text-align: center; }
+  .period-row .tilde { font-size: clamp(12px, 1.6vw, 18px); color: #555; }
+  .period-row .total-days {
+    display: flex;
+    align-items: center;
+    gap: clamp(3px, 0.5vw, 6px);
+    color: #444;
+    font-size: clamp(10px, 1.3vw, 13px);
+  }
+  .period-row .total-days input { width: clamp(36px, 5vw, 48px); }
+
+  /* ── 하단 서명 영역 ── */
+  .footer-bottom {
+    display: flex;
+    flex-direction: column;
+    gap: clamp(12px, 2.5vw, 26px);
+  }
+
+  .footer-section {
+    text-align: center;
+    font-size: clamp(11px, 1.5vw, 13.5px);
+    color: #222;
+    margin-top: clamp(4px, 1vw, 10px);
+  }
+
+  .submit-date {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: clamp(4px, 0.8vw, 8px);
+    font-size: clamp(11px, 1.5vw, 13.5px);
+    flex-wrap: wrap;
+  }
+  .submit-date span { color: #444; }
+  .submit-date input[type="number"] { width: auto; }
+  #submitYear  { width: clamp(46px, 6vw, 66px); }
+  #submitMonth { width: clamp(30px, 4vw, 44px); }
+  #submitDay   { width: clamp(30px, 4vw, 44px); }
+
+  .sign-area {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: clamp(6px, 1vw, 10px);
+    font-size: clamp(11px, 1.5vw, 13.5px);
+  }
+  .sign-row {
+    display: flex;
+    align-items: center;
+    gap: clamp(8px, 1.5vw, 16px);
+  }
+  .sign-row .label {
+    width: clamp(36px, 5vw, 46px);
+    text-align: justify;
+    text-align-last: justify;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    white-space: nowrap;
+  }
+  .sign-row input { width: clamp(100px, 16vw, 148px); font-size: clamp(11px, 1.5vw, 13.5px); }
+  .sign-box {
+    width: clamp(54px, 7vw, 74px);
+    height: clamp(36px, 5vw, 48px);
+    border: 1.5px solid #aaa;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: clamp(9px, 1.1vw, 11px);
+    color: #bbb;
+    border-radius: 3px;
+    flex-shrink: 0;
+    cursor: pointer;
+    overflow: hidden;
+    position: relative;
+    transition: border-color 0.2s, background 0.2s;
+  }
+  .sign-box:hover { border-color: #2a7fc8; background: #f0f7ff; color: #2a7fc8; }
+  .sign-box img {
+    width: 100%; height: 100%;
+    object-fit: contain;
+    display: block;
+  }
+  .sign-box .remove-btn {
+    display: none;
+    position: absolute;
+    top: -1px; right: -1px;
+    background: rgba(200,40,40,0.85);
+    color: white;
+    border: none;
+    border-radius: 0 3px 0 4px;
+    font-size: 10px;
+    padding: 1px 4px;
+    cursor: pointer;
+    line-height: 1.4;
+    z-index: 2;
+  }
+  .sign-box:hover .remove-btn { display: block; }
+  #signImageInput { display: none; }
+
+  /* ══════════════════════════════════
+     모바일 (600px 이하)
+  ══════════════════════════════════ */
+  @media (max-width: 600px) {
+    body { padding: 0; gap: 0; background: #d0d0d0; }
+
+    .toolbar {
+      width: 100%; border-radius: 0;
+      padding: 10px 12px; top: 0; gap: 8px;
+    }
+    .toolbar button { font-size: 11.5px; padding: 7px 12px; }
+
+    .paper-wrap { box-shadow: none; width: 100%; }
+    .form-page  { padding: 18px 14px 30px; }
+
+    h1 { font-size: 20px; letter-spacing: 0.18em; margin-bottom: 14px; margin-top: 2px; }
+
+    .approval-box { position: static; margin: 0 auto 14px; }
+    .approval-box td, .approval-box th { min-width: 38px; height: 26px; font-size: 10px; padding: 3px 7px; }
+
+    /* 테이블 블록화 */
+    .main-table, .main-table tbody,
+    .main-table tr, .main-table th, .main-table td { display: block; width: 100%; }
+    .main-table tr  { border-bottom: none; }
+    .main-table th  { width: 100%; padding: 8px 12px 4px; text-align: left; border-right: none; border-bottom: 1px solid #ccc; font-size: 11.5px; background: #f4f4f4; }
+    .main-table td  { padding: 8px 12px 11px; border-bottom: 2px solid var(--border); }
+    .main-table tr:last-child td { border-bottom: none; }
+
+    .days-row   { flex-direction: column; }
+    .days-cell  { border-right: none; border-bottom: 1px solid #ddd; padding: 8px 0; }
+    .days-cell:last-child { border-bottom: none; }
+
+    .period-row { flex-direction: column; align-items: flex-start; gap: 8px; }
+    .period-row input[type="date"] { width: 100%; }
+    .period-row .tilde { display: none; }
+
+    .sign-area  { align-items: stretch; }
+    .sign-row   { flex-wrap: wrap; gap: 8px; }
+    .sign-row input { flex: 1; min-width: 90px; }
+    .sign-box   { margin-left: auto; }
+
+    .footer-bottom { gap: 14px; }
+    .footer-section { font-size: 12px; }
+  }
+
+  /* ══════════════════════════════════
+     인쇄 — A4 portrait 최적화
+  ══════════════════════════════════ */
+  @media print {
+    html, body { margin: 0; padding: 0; background: white; }
+    .toolbar    { display: none; }
+
+    @page { size: A4 portrait; margin: 14mm 16mm 14mm 16mm; }
+
+    .paper-wrap {
+      width: 100%;
+      box-shadow: none;
+    }
+
+    .form-page  { padding: 0; position: relative; }
+
+    h1 { font-size: 20pt; letter-spacing: 0.4em; margin-bottom: 14pt; }
+
+    .approval-box { position: absolute; top: 0; right: 0; }
+    .approval-box td, .approval-box th { min-width: 44px; height: 24px; font-size: 9pt; padding: 3px 9px; }
+    .approval-box .row-label { width: 18px; font-size: 8pt; padding: 2px 3px; }
+
+    .main-table { margin-bottom: 14pt; }
+    .main-table th { font-size: 9.5pt; padding: 8pt 0; width: 82px; }
+    .main-table td { font-size: 9.5pt; padding: 6pt 12pt; }
+
+    /* 모바일 블록화 리셋 */
+    .main-table, .main-table tbody,
+    .main-table tr, .main-table th, .main-table td { display: revert; }
+    .main-table tr  { border-bottom: 1px solid var(--border); }
+    .main-table tr:last-child { border-bottom: none; }
+    .main-table th  { background: var(--cell-bg); border-right: 1px solid var(--border); text-align: center; }
+    .main-table td  { border-bottom: none; }
+
+    .days-row   { flex-direction: row; }
+    .days-cell  { border-right: 1px solid var(--border); border-bottom: none; font-size: 9pt; padding: 6pt 8pt; }
+    .days-cell:last-child { border-right: none; }
+    .days-cell input { width: 38px; }
+
+    .period-row { flex-direction: row; align-items: center; gap: 6pt; font-size: 9pt; }
+    .period-row .tilde { display: inline; }
+    .period-row input[type="date"] { width: 108px; }
+    .period-row .total-days { font-size: 9pt; }
+
+    .leave-types label { font-size: 9.5pt; }
+    .leave-types input[type="radio"] { width: 12px; height: 12px; }
+
+    .footer-bottom { gap: 14pt; margin-top: 8pt; }
+    .footer-section { font-size: 10pt; }
+    .submit-date { font-size: 10pt; gap: 5pt; }
+    #submitYear  { width: 50px; }
+    #submitMonth { width: 32px; }
+    #submitDay   { width: 32px; }
+
+    .sign-area  { align-items: flex-end; gap: 7pt; font-size: 10pt; }
+    .sign-row   { gap: 10pt; }
+    .sign-row .label { width: 36px; }
+    .sign-row input  { width: 120px; font-size: 10pt; }
+    .sign-box   { width: 58px; height: 40px; font-size: 8.5pt; }
+
+    input, select, textarea {
+      border-bottom-color: #888 !important;
+      background: transparent !important;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+    input[type="radio"] { accent-color: #000; }
+  }
+</style>
+</head>
+<body>
+
+<div class="toolbar">
+  <button class="btn-reset" onclick="resetForm()">🗑 초기화</button>
+  <button class="btn-print" onclick="window.print()">🖨 인쇄 / PDF 저장 (A4)</button>
+  <button class="btn-pdf"   onclick="printGuide()">💡 PDF 저장 방법</button>
+</div>
+
+<div class="paper-wrap">
+  <div class="form-page">
+
+    <div class="approval-box">
+      <table>
+        <tr>
+          <th class="row-label" rowspan="2">결<br>재</th>
+          <th>담 당</th>
+          <th>부서장</th>
+        </tr>
+        <tr>
+          <td style="height:44px;"></td>
+          <td style="height:44px;"></td>
+        </tr>
+      </table>
+    </div>
+
+    <h1>휴 가 신 청 서</h1>
+
+    <table class="main-table">
+      <tr>
+        <th>소 &nbsp;&nbsp; 속</th>
+        <td><input type="text" id="dept" placeholder="소속 부서 / 회사명 입력"></td>
+      </tr>
+      <tr>
+        <th>성 &nbsp;&nbsp; 명</th>
+        <td><input type="text" id="name" placeholder="성명 입력"></td>
+      </tr>
+      <tr>
+        <th>직 &nbsp;&nbsp; 위</th>
+        <td><input type="text" id="position" placeholder="직위 입력"></td>
+      </tr>
+      <tr>
+        <th>휴가 종류</th>
+        <td>
+          <div class="leave-types">
+            <label><input type="radio" name="leaveType" value="년차휴가"> ■ 년차휴가</label>
+            <label><input type="radio" name="leaveType" value="경조휴가"> ■ 경조휴가</label>
+            <label><input type="radio" name="leaveType" value="특별휴가"> ■ 특별휴가</label>
+            <label><input type="radio" name="leaveType" value="기타"> ■ 기타</label>
+          </div>
+        </td>
+      </tr>
+      <tr>
+        <th>휴가 사유</th>
+        <td><input type="text" id="reason" placeholder="휴가 사유 입력"></td>
+      </tr>
+      <tr>
+        <th>년차사용일수</th>
+        <td style="padding:0;">
+          <div class="days-row">
+            <div class="days-cell">
+              <span>금년차 사용가능일 :</span>
+              <input type="number" id="available" min="0" max="365" placeholder="0">
+              <span>일</span>
+            </div>
+            <div class="days-cell">
+              <span>금년차 사용 누적일(금회포함) :</span>
+              <input type="number" id="accumulated" min="0" max="365" placeholder="0">
+              <span>일</span>
+            </div>
+          </div>
+        </td>
+      </tr>
+      <tr>
+        <th>휴가 기간</th>
+        <td>
+          <div class="period-row">
+            <input type="date" id="startDate" onchange="calcDays()">
+            <span class="tilde">~</span>
+            <input type="date" id="endDate" onchange="calcDays()">
+            <div class="total-days">
+              <span>(</span>
+              <input type="number" id="totalDays" min="1" placeholder="1">
+              <span>일간)</span>
+            </div>
+          </div>
+        </td>
+      </tr>
+      <tr>
+        <th>비상연락처</th>
+        <td><input type="tel" id="phone" placeholder="010-0000-0000"></td>
+      </tr>
+    </table>
+
+    <div class="footer-bottom">
+      <div class="footer-section">
+        위와 같이 휴가를 신청하오니 허락하여 주시기 바랍니다.
+      </div>
+
+      <div class="submit-date">
+        <input type="number" id="submitYear"  min="2000" max="2100">
+        <span>년</span>
+        <input type="number" id="submitMonth" min="1" max="12">
+        <span>월</span>
+        <input type="number" id="submitDay"   min="1" max="31">
+        <span>일</span>
+      </div>
+
+      <div class="sign-area">
+        <div class="sign-row">
+          <span class="label">소 속</span>
+          <span>:</span>
+          <input type="text" id="signDept" placeholder="소속 입력">
+        </div>
+        <div class="sign-row">
+          <span class="label">성 명</span>
+          <span>:</span>
+          <input type="text" id="signName" placeholder="성명 입력">
+          <input type="file" id="signImageInput" accept="image/*">
+          <div class="sign-box" id="signBox" onclick="handleSignBoxClick(event)" title="클릭하여 서명 이미지 업로드">
+            <span id="signBoxLabel">서명/인</span>
+            <button class="remove-btn" id="removeSignBtn" onclick="removeSignImage(event)" title="이미지 삭제">✕</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- PDF 안내 모달 -->
+<div id="guide-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:999;align-items:center;justify-content:center;">
+  <div style="background:white;border-radius:16px;padding:30px 36px;max-width:400px;width:90%;box-shadow:0 20px 60px rgba(0,0,0,0.3);">
+    <h2 style="font-size:16px;margin-bottom:16px;color:#1a1a2e;">📄 PDF로 저장하는 방법</h2>
+    <ol style="font-size:13px;line-height:2.2;padding-left:18px;color:#333;">
+      <li><b>인쇄 / PDF 저장</b> 버튼 클릭</li>
+      <li>프린터를 <b>PDF로 저장</b>으로 선택</li>
+      <li>용지 크기 <b>A4</b> 설정</li>
+      <li>여백 <b>없음</b> 또는 <b>최소</b> 선택</li>
+      <li><b>저장</b> 클릭</li>
+    </ol>
+    <p style="font-size:11px;color:#888;margin-top:12px;">※ Chrome · Edge 브라우저 권장</p>
+    <button onclick="document.getElementById('guide-modal').style.display='none'"
+      style="margin-top:16px;padding:8px 24px;background:#1a1a2e;color:white;border:none;border-radius:30px;font-family:'Noto Sans KR',sans-serif;font-size:13px;cursor:pointer;">
+      닫기
+    </button>
+  </div>
+</div>
+
+<script>
+  function calcDays() {
+    const s = document.getElementById('startDate').value;
+    const e = document.getElementById('endDate').value;
+    if (s && e) {
+      const diff = Math.round((new Date(e) - new Date(s)) / 86400000) + 1;
+      document.getElementById('totalDays').value = diff > 0 ? diff : 1;
+    }
+  }
+
+  // 서명 이미지 업로드
+  function handleSignBoxClick(e) {
+    if (e.target.id === 'removeSignBtn') return;
+    document.getElementById('signImageInput').click();
+  }
+
+  document.getElementById('signImageInput').addEventListener('change', function() {
+    const file = this.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = function(ev) {
+      const box = document.getElementById('signBox');
+      const label = document.getElementById('signBoxLabel');
+      // 기존 img 제거
+      const old = box.querySelector('img');
+      if (old) old.remove();
+      // 새 img 삽입
+      const img = document.createElement('img');
+      img.src = ev.target.result;
+      box.insertBefore(img, document.getElementById('removeSignBtn'));
+      label.style.display = 'none';
+      box.style.borderColor = '#555';
+      box.style.background  = 'transparent';
+    };
+    reader.readAsDataURL(file);
+  });
+
+  function removeSignImage(e) {
+    e.stopPropagation();
+    const box = document.getElementById('signBox');
+    const img = box.querySelector('img');
+    if (img) img.remove();
+    document.getElementById('signBoxLabel').style.display = '';
+    document.getElementById('signImageInput').value = '';
+    box.style.borderColor = '';
+    box.style.background  = '';
+  }
+
+  function resetForm() {
+    if (!confirm('입력 내용을 모두 초기화하시겠습니까?')) return;
+    document.querySelectorAll('input[type="text"],input[type="date"],input[type="number"],input[type="tel"]')
+      .forEach(el => el.value = '');
+    document.querySelectorAll('input[type="radio"]').forEach(el => el.checked = false);
+    removeSignImage({ stopPropagation: () => {} });
+    setToday();
+  }
+
+  function printGuide() {
+    document.getElementById('guide-modal').style.display = 'flex';
+  }
+
+  document.getElementById('dept').addEventListener('input', function() {
+    document.getElementById('signDept').value = this.value;
+  });
+  document.getElementById('name').addEventListener('input', function() {
+    document.getElementById('signName').value = this.value;
+  });
+
+  function setToday() {
+    const t = new Date();
+    document.getElementById('submitYear').value  = t.getFullYear();
+    document.getElementById('submitMonth').value = t.getMonth() + 1;
+    document.getElementById('submitDay').value   = t.getDate();
+  }
+  setToday();
+</script>
+</body>
+</html>
