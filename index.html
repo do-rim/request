@@ -706,66 +706,65 @@
     const A4_H = 1123 * 3;  // 3369px
 
     try {
-      // ── 1. 숨겨진 오프스크린 iframe으로 680px 데스크탑 레이아웃 렌더 ──
-      const iframe = document.createElement('iframe');
-      iframe.style.cssText = 'position:fixed;left:-9999px;top:0;width:680px;height:1200px;border:none;visibility:hidden;';
-      document.body.appendChild(iframe);
+      // ── 1. 현재 신청서를 오프스크린 A4 저장용 레이아웃으로 복제 ──
+      await (document.fonts ? document.fonts.ready : Promise.resolve());
 
-      // 현재 HTML을 그대로 복제해 iframe에 주입
-      const srcHtml = document.documentElement.outerHTML;
-      iframe.contentDocument.open();
-      iframe.contentDocument.write(srcHtml);
-      iframe.contentDocument.close();
+      const stage = document.createElement('div');
+      stage.id = 'imageExportStage';
+      stage.style.cssText = 'position:fixed;left:-10000px;top:0;width:680px;background:white;pointer-events:none;';
 
-      // 폰트·렌더링 대기
-      await new Promise(r => setTimeout(r, 800));
+      const exportStyle = document.createElement('style');
+      exportStyle.textContent = `
+        #imageExportStage, #imageExportStage * { box-sizing: border-box; }
+        #imageExportStage .paper-wrap { width:680px !important; max-width:none !important; box-shadow:none !important; background:#fff !important; }
+        #imageExportStage .form-page { width:100% !important; padding:5.5% 7% 5.5% !important; position:relative !important; }
+        #imageExportStage h1 { font-size:30px !important; letter-spacing:0.4em !important; margin:0 0 28px !important; text-align:center !important; }
+        #imageExportStage .approval-box { position:absolute !important; top:5.5% !important; right:7% !important; margin:0 !important; }
+        #imageExportStage .main-table { display:table !important; width:100% !important; border-collapse:collapse !important; table-layout:auto !important; margin-bottom:30px !important; }
+        #imageExportStage .main-table tbody { display:table-row-group !important; }
+        #imageExportStage .main-table tr { display:table-row !important; border-bottom:1px solid var(--border) !important; }
+        #imageExportStage .main-table th { display:table-cell !important; width:118px !important; padding:15px 0 !important; text-align:center !important; border-right:1px solid var(--border) !important; border-bottom:none !important; font-size:13.5px !important; background:var(--cell-bg) !important; }
+        #imageExportStage .main-table td { display:table-cell !important; padding:11px 18px !important; border-bottom:none !important; font-size:13px !important; }
+        #imageExportStage .days-row { flex-direction:row !important; }
+        #imageExportStage .days-cell { border-right:1px solid var(--border) !important; border-bottom:none !important; padding:11px 14px !important; font-size:12.5px !important; }
+        #imageExportStage .days-cell:last-child { border-right:none !important; }
+        #imageExportStage .period-row { flex-direction:row !important; align-items:center !important; gap:10px !important; }
+        #imageExportStage .period-row .tilde { display:inline !important; }
+        #imageExportStage .period-row input[type="date"] { width:148px !important; }
+        #imageExportStage .sign-area { align-items:flex-end !important; }
+        #imageExportStage .sign-row { flex-wrap:nowrap !important; gap:16px !important; }
+        #imageExportStage .sign-row input { width:148px !important; }
+      `;
+      stage.appendChild(exportStyle);
 
-      const idoc  = iframe.contentDocument;
-      const iwin  = iframe.contentWindow;
+      const clone = document.querySelector('.paper-wrap').cloneNode(true);
+      stage.appendChild(clone);
+      document.body.appendChild(stage);
 
-      // iframe 내 현재 값 동기화
+      // 복제본에 현재 값 동기화
       const fields = ['dept','name','position','reason','available','accumulated',
                       'startDate','endDate','totalDays','phone',
                       'submitYear','submitMonth','submitDay','signDept','signName'];
       fields.forEach(id => {
         const src = document.getElementById(id);
-        const dst = idoc.getElementById(id);
+        const dst = clone.querySelector(`#${id}`);
         if (src && dst) dst.value = src.value;
       });
       // 라디오 동기화
       document.querySelectorAll('input[name="leaveType"]').forEach(r => {
-        const dst = idoc.querySelector(`input[name="leaveType"][value="${r.value}"]`);
+        const dst = clone.querySelector(`input[name="leaveType"][value="${r.value}"]`);
         if (dst) dst.checked = r.checked;
       });
-      // 서명 이미지 동기화
-      const srcImg = document.querySelector('#signBox img');
-      if (srcImg) {
-        const dstBox = idoc.getElementById('signBox');
-        const dstLabel = idoc.getElementById('signBoxLabel');
-        if (dstBox) {
-          const ni = idoc.createElement('img');
-          ni.src = srcImg.src;
-          ni.style.cssText = 'width:100%;height:100%;object-fit:contain;display:block;';
-          const dstRemove = idoc.getElementById('removeSignBtn');
-          dstBox.insertBefore(ni, dstRemove);
-          if (dstLabel) dstLabel.style.display = 'none';
-          dstBox.style.background = '#ffffff';
-        }
-      }
 
       // 점선 밑줄 제거 + 툴바 숨김
-      idoc.querySelectorAll('input').forEach(el => el.style.borderBottom = 'none');
-      const tb = idoc.querySelector('.toolbar');
-      if (tb) tb.style.display = 'none';
-      // body 패딩 제거
-      idoc.body.style.cssText = 'margin:0;padding:0;background:white;display:block;';
-      const pw = idoc.querySelector('.paper-wrap');
-      if (pw) { pw.style.width = '680px'; pw.style.boxShadow = 'none'; }
+      clone.querySelectorAll('input').forEach(el => el.style.borderBottom = 'none');
+      clone.style.width = '680px';
+      clone.style.boxShadow = 'none';
 
       await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
 
       // ── 2. html2canvas로 캡처 ──
-      const raw = await iwin.html2canvas(idoc.querySelector('.paper-wrap'), {
+      const raw = await html2canvas(clone, {
         scale: 3,
         useCORS: true,
         backgroundColor: '#ffffff',
@@ -774,7 +773,7 @@
         windowWidth: 680,
       });
 
-      document.body.removeChild(iframe);
+      document.body.removeChild(stage);
 
       // ── 3. A4 캔버스에 맞게 스케일 합성 ──
       const out = document.createElement('canvas');
